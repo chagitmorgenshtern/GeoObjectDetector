@@ -9,7 +9,7 @@ DetectionManager::DetectionManager(const Config& cfg)
     detector->setMinArea(config.detectorMinArea);
 }
 
-void DetectionManager::processImage(const std::string& imagePath,
+std::vector<DetectionResult> DetectionManager::processImage(const std::string& imagePath,
                                       double topLeftLat,
                                       double topLeftLon,
                                       double resolutionMetersPerPixel) {
@@ -23,7 +23,7 @@ void DetectionManager::processImage(const std::string& imagePath,
     georeferencer->setImageDimensions(image.cols, image.rows);
 
     std::vector<BoundingBox> boxes = detector->detectObjects(imagePath);
-    results.clear();
+    std::vector<DetectionResult> results;
     int id = 1;
     for (const auto& box : boxes) {
         double centerX = box.x + box.width / 2.0;
@@ -31,20 +31,12 @@ void DetectionManager::processImage(const std::string& imagePath,
         Location location = georeferencer->pixelToLatLon(centerX, centerY);
         results.emplace_back(id++, box, location);
     }
-}
-
-std::vector<DetectionResult> DetectionManager::getResults() const {
     return results;
 }
 
-std::string DetectionManager::resultsToJSON() const {
-    std::string output = "[\n";
-    for (size_t i = 0; i < results.size(); ++i) {
-        output += results[i].toJSON();
-        if (i + 1 < results.size()) {
-            output += ",\n";
-        }
-    }
-    output += "\n]\n";
-    return output;
+std::vector<DetectionResult> DetectionManager::detect(const DetectionRequest& request) {
+    return processImage(request.imagePath,
+                        request.topLeftLat,
+                        request.topLeftLon,
+                        request.resolutionMetersPerPixel);
 }

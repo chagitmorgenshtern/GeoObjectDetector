@@ -16,3 +16,15 @@ std::string DetectionResult::toJSON() const {
     out << "  }";
     return out.str();
 }
+
+std::string DetectionResult::arrayToJSON(const std::vector<DetectionResult>& results) {
+    std::string output = "[\n";
+    for (size_t i = 0; i < results.size(); ++i) {
+        output += results[i].toJSON();
+        if (i + 1 < results.size()) {
+            output += ",\n";
+        }
+    }
+    output += "\n]\n";
+    return output;
+}

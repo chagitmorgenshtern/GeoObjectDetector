@@ -21,4 +21,6 @@ public:
     DetectionResult(int id, const BoundingBox& bbox, const Location& loc);
     
     std::string toJSON() const;
+    
+    static std::string arrayToJSON(const std::vector<DetectionResult>& results);
 };
