@@ -55,6 +55,11 @@ The server will read the image from the local filesystem using the provided `ima
 
 Output: JSON array with detected objects, their bounding boxes, and geographic locations.
 
+## Assumptions
+
+- **Image File Path**: The API receives a path to an image file (or an uploaded image file) and not the raw image bytes embedded in the request payload.
+- **Image Resolution**: The image resolution represents the ground distance covered by a single pixel and is expressed in **meters per pixel**.
+
 ## Configuration
 
 The server is currently configured with defaults:
@@ -79,10 +84,13 @@ You can override these values by editing `src/Config.cpp` or adding optional con
 ]
 ```
 
-## Next Steps
+## Testing
 
-- [ ] Implement ObjectDetector (OpenCV contour detection)
-- [ ] Implement GeoReferencer (pixel to lat/lon conversion)
-- [ ] Complete DetectionManager orchestration
-- [ ] Add WebServer HTTP endpoints
-- [ ] Create test cases and sample image
+Run the unit tests:
+
+```bash
+cd build
+./test_detector
+```
+
+Tests verify GeoReferencer coordinate conversion and DetectionResult JSON serialization.
