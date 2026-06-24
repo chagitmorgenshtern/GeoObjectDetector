@@ -21,5 +21,14 @@ set(SOURCES
 add_executable(detector ${SOURCES})
 target_link_libraries(detector ${OpenCV_LIBS})
 
-# For WebServer, we might need additional libraries like cpp-httplib or similar
-# For now, leaving as placeholder
+# Build unit tests
+add_executable(test_detector 
+    test/test_detector.cpp
+    src/GeoReferencer.cpp
+    src/DetectionResult.cpp
+)
+target_link_libraries(test_detector ${OpenCV_LIBS})
+
+# Enable testing
+enable_testing()
+add_test(NAME detector_tests COMMAND test_detector)

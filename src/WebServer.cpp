@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
 
 WebServer::WebServer(int port, std::shared_ptr<DetectionManager> detectionManager)
     : port(port), manager(std::move(detectionManager)), isRunning(false) {}
@@ -120,6 +121,11 @@ static std::string getRequestLine(const std::string& requestData) {
     return requestData.substr(0, pos);
 }
 
+static bool fileExists(const std::string& path) {
+    std::ifstream file(path);
+    return file.good();
+}
+
 bool WebServer::start() {
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket < 0) {
@@ -199,16 +205,34 @@ bool WebServer::start() {
         try {
             if (getMethod(requestLine) == "POST" && (path == "/detect" || path == "/detect/")) {
                 SimpleJson::Value root = SimpleJson::parse(body);
-                std::string imagePath = SimpleJson::get(root, "image_path").string;
-                double topLeftLat = SimpleJson::get(root, "top_left_lat").number;
-                double topLeftLon = SimpleJson::get(root, "top_left_lon").number;
-                double resolution = SimpleJson::get(root, "resolution").number;
-                if (resolution <= 0) {
-                    response = makeResponse(400, "Bad Request", "{\"error\": \"resolution must be positive\"}");
+                
+                // Validate required fields
+                if (!SimpleJson::hasKey(root, "image_path")) {
+                    response = makeResponse(400, "Bad Request", "{\"error\": \"missing required field: image_path\"}");
+                } else if (!SimpleJson::hasKey(root, "top_left_lat")) {
+                    response = makeResponse(400, "Bad Request", "{\"error\": \"missing required field: top_left_lat\"}");
+                } else if (!SimpleJson::hasKey(root, "top_left_lon")) {
+                    response = makeResponse(400, "Bad Request", "{\"error\": \"missing required field: top_left_lon\"}");
+                } else if (!SimpleJson::hasKey(root, "resolution")) {
+                    response = makeResponse(400, "Bad Request", "{\"error\": \"missing required field: resolution\"}");
                 } else {
-                    manager->processImage(imagePath, topLeftLat, topLeftLon, resolution);
-                    std::string bodyOut = manager->resultsToJSON();
-                    response = makeResponse(200, "OK", bodyOut);
+                    std::string imagePath = SimpleJson::get(root, "image_path").string;
+                    double topLeftLat = SimpleJson::get(root, "top_left_lat").number;
+                    double topLeftLon = SimpleJson::get(root, "top_left_lon").number;
+                    double resolution = SimpleJson::get(root, "resolution").number;
+                    
+                    // Validate values
+                    if (imagePath.empty()) {
+                        response = makeResponse(400, "Bad Request", "{\"error\": \"image_path cannot be empty\"}");
+                    } else if (!fileExists(imagePath)) {
+                        response = makeResponse(400, "Bad Request", "{\"error\": \"image_path does not exist\"}");
+                    } else if (resolution <= 0) {
+                        response = makeResponse(400, "Bad Request", "{\"error\": \"resolution must be positive\"}");
+                    } else {
+                        manager->processImage(imagePath, topLeftLat, topLeftLon, resolution);
+                        std::string bodyOut = manager->resultsToJSON();
+                        response = makeResponse(200, "OK", bodyOut);
+                    }
                 }
             } else {
                 response = makeResponse(404, "Not Found", "{\"error\": \"Endpoint not found\"}");
