@@ -120,30 +120,6 @@ static std::string getRequestLine(const std::string& requestData) {
     return requestData.substr(0, pos);
 }
 
-static bool parseGeoCalibration(const SimpleJson::Value& json, GeoCalibration& calibration) {
-    if (!json.isObject()) return false;
-    if (!SimpleJson::hasKey(json, "topLeft") ||
-        !SimpleJson::hasKey(json, "topRight") ||
-        !SimpleJson::hasKey(json, "bottomLeft") ||
-        !SimpleJson::hasKey(json, "bottomRight")) {
-        return false;
-    }
-    const SimpleJson::Value& topLeft = SimpleJson::get(json, "topLeft");
-    const SimpleJson::Value& topRight = SimpleJson::get(json, "topRight");
-    const SimpleJson::Value& bottomLeft = SimpleJson::get(json, "bottomLeft");
-    const SimpleJson::Value& bottomRight = SimpleJson::get(json, "bottomRight");
-
-    calibration.lat_top_left = SimpleJson::get(topLeft, "lat").number;
-    calibration.lon_top_left = SimpleJson::get(topLeft, "lon").number;
-    calibration.lat_top_right = SimpleJson::get(topRight, "lat").number;
-    calibration.lon_top_right = SimpleJson::get(topRight, "lon").number;
-    calibration.lat_bottom_left = SimpleJson::get(bottomLeft, "lat").number;
-    calibration.lon_bottom_left = SimpleJson::get(bottomLeft, "lon").number;
-    calibration.lat_bottom_right = SimpleJson::get(bottomRight, "lat").number;
-    calibration.lon_bottom_right = SimpleJson::get(bottomRight, "lon").number;
-    return true;
-}
-
 bool WebServer::start() {
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket < 0) {
@@ -223,16 +199,14 @@ bool WebServer::start() {
         try {
             if (getMethod(requestLine) == "POST" && (path == "/detect" || path == "/detect/")) {
                 SimpleJson::Value root = SimpleJson::parse(body);
-                std::string imagePath = SimpleJson::get(root, "image").string;
-                const SimpleJson::Value& geoJson = SimpleJson::get(root, "geoCalibration");
-                GeoCalibration calibration;
-                if (!parseGeoCalibration(geoJson, calibration)) {
-                    response = makeResponse(400, "Bad Request", "{\"error\": \"geoCalibration must include topLeft, topRight, bottomLeft, bottomRight\"}");
+                std::string imagePath = SimpleJson::get(root, "image_path").string;
+                double topLeftLat = SimpleJson::get(root, "top_left_lat").number;
+                double topLeftLon = SimpleJson::get(root, "top_left_lon").number;
+                double resolution = SimpleJson::get(root, "resolution").number;
+                if (resolution <= 0) {
+                    response = makeResponse(400, "Bad Request", "{\"error\": \"resolution must be positive\"}");
                 } else {
-                    const SimpleJson::Value& resolutionJson = SimpleJson::get(root, "resolution");
-                    int width = static_cast<int>(SimpleJson::get(resolutionJson, "width").number);
-                    int height = static_cast<int>(SimpleJson::get(resolutionJson, "height").number);
-                    manager->processImage(imagePath, calibration, width, height);
+                    manager->processImage(imagePath, topLeftLat, topLeftLon, resolution);
                     std::string bodyOut = manager->resultsToJSON();
                     response = makeResponse(200, "OK", bodyOut);
                 }

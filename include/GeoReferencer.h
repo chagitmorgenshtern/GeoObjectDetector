@@ -4,26 +4,22 @@
 #include <array>
 
 class GeoReferencer {
-public:
-    struct CalibrationPoint {
-        int pixel_x, pixel_y;
-        double lat, lon;
-    };
-
 private:
-    std::array<CalibrationPoint, 4> calibrationPoints;
-    int imageWidth, imageHeight;
-    bool isCalibrated;
+    double originLat;
+    double originLon;
+    double resolutionMetersPerPixel;
+    int imageWidth;
+    int imageHeight;
+    bool hasOrigin;
+    bool hasResolution;
+    bool hasDimensions;
 
 public:
     GeoReferencer();
 
-    void setCalibration(const CalibrationPoint& topLeft,
-                        const CalibrationPoint& topRight,
-                        const CalibrationPoint& bottomLeft,
-                        const CalibrationPoint& bottomRight);
-
+    void setOrigin(double lat, double lon);
+    void setResolution(double metersPerPixel);
     void setImageDimensions(int width, int height);
 
-    Location pixelToLatLon(double pixelX, double pixelY);
+    Location pixelToLatLon(double pixelX, double pixelY) const;
 };

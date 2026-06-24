@@ -44,42 +44,25 @@ Then send a single POST request to `/detect`:
 curl -X POST http://localhost:8080/detect \
   -H 'Content-Type: application/json' \
   -d '{
-    "image": "image.png",
-    "geoCalibration": {
-      "topLeft": {"lat": 32.0802, "lon": 34.7815},
-      "topRight": {"lat": 32.0802, "lon": 34.7820},
-      "bottomLeft": {"lat": 32.0797, "lon": 34.7815},
-      "bottomRight": {"lat": 32.0797, "lon": 34.7820}
-    },
-    "resolution": {"width": 1920, "height": 1080}
+    "image_path": "/tmp/image.jpg",
+    "top_left_lat": 32.1,
+    "top_left_lon": 34.8,
+    "resolution": 0.5
   }'
 ```
 
-The server will read the image from the local filesystem using the provided `image` file name.
+The server will read the image from the local filesystem using the provided `image_path`.
 
 Output: JSON array with detected objects, their bounding boxes, and geographic locations.
 
 ## Configuration
 
-Create a `config.json` file with calibration points:
+The server is currently configured with defaults:
 
-```json
-{
-  "image_path": "image.png",
-  "geo_calibration": {
-    "lat_top_left": 32.0802,
-    "lon_top_left": 34.7815,
-    "lat_top_right": 32.0803,
-    "lon_top_right": 34.7820,
-    "lat_bottom_left": 32.0797,
-    "lon_bottom_left": 34.7815,
-    "lat_bottom_right": 32.0797,
-    "lon_bottom_right": 34.7820
-  },
-  "server_port": 8080,
-  "detector_min_area": 500
-}
-```
+- `server_port`: 8080
+- `detector_min_area`: 500
+
+You can override these values by editing `src/Config.cpp` or adding optional configuration support later.
 
 ## Output Example
 

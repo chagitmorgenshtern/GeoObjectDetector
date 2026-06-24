@@ -17,12 +17,10 @@ private:
 public:
     DetectionManager(const Config& cfg);
 
-    void processImage(const std::string& imagePath);
     void processImage(const std::string& imagePath,
-                      const GeoCalibration& geoCalibration,
-                      int resolutionWidth,
-                      int resolutionHeight);
-
+                      double topLeftLat,
+                      double topLeftLon,
+                      double resolutionMetersPerPixel);
     std::vector<DetectionResult> getResults() const;
 
     std::string resultsToJSON() const;

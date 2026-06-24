@@ -9,40 +9,18 @@ DetectionManager::DetectionManager(const Config& cfg)
     detector->setMinArea(config.detectorMinArea);
 }
 
-void DetectionManager::processImage(const std::string& imagePath) {
-    if (config.geoCalibration.lat_top_left == 0.0 &&
-        config.geoCalibration.lon_top_left == 0.0 &&
-        config.geoCalibration.lat_top_right == 0.0 &&
-        config.geoCalibration.lon_top_right == 0.0 &&
-        config.geoCalibration.lat_bottom_left == 0.0 &&
-        config.geoCalibration.lon_bottom_left == 0.0 &&
-        config.geoCalibration.lat_bottom_right == 0.0 &&
-        config.geoCalibration.lon_bottom_right == 0.0) {
-        throw std::runtime_error("Geo calibration not provided in config");
-    }
-    processImage(imagePath, config.geoCalibration, 0, 0);
-}
-
 void DetectionManager::processImage(const std::string& imagePath,
-                                    const GeoCalibration& geoCalibration,
-                                    int resolutionWidth,
-                                    int resolutionHeight) {
+                                      double topLeftLat,
+                                      double topLeftLon,
+                                      double resolutionMetersPerPixel) {
     cv::Mat image = cv::imread(imagePath);
     if (image.empty()) {
         throw std::runtime_error("Unable to open image: " + imagePath);
     }
 
-    if (resolutionWidth <= 0 || resolutionHeight <= 0) {
-        resolutionWidth = image.cols;
-        resolutionHeight = image.rows;
-    }
-
-    georeferencer->setImageDimensions(resolutionWidth, resolutionHeight);
-    GeoReferencer::CalibrationPoint topLeft{0, 0, geoCalibration.lat_top_left, geoCalibration.lon_top_left};
-    GeoReferencer::CalibrationPoint topRight{resolutionWidth - 1, 0, geoCalibration.lat_top_right, geoCalibration.lon_top_right};
-    GeoReferencer::CalibrationPoint bottomLeft{0, resolutionHeight - 1, geoCalibration.lat_bottom_left, geoCalibration.lon_bottom_left};
-    GeoReferencer::CalibrationPoint bottomRight{resolutionWidth - 1, resolutionHeight - 1, geoCalibration.lat_bottom_right, geoCalibration.lon_bottom_right};
-    georeferencer->setCalibration(topLeft, topRight, bottomLeft, bottomRight);
+    georeferencer->setOrigin(topLeftLat, topLeftLon);
+    georeferencer->setResolution(resolutionMetersPerPixel);
+    georeferencer->setImageDimensions(image.cols, image.rows);
 
     std::vector<BoundingBox> boxes = detector->detectObjects(imagePath);
     results.clear();

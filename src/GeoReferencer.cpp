@@ -1,48 +1,47 @@
 #include "GeoReferencer.h"
+#include <cmath>
 #include <stdexcept>
 
 GeoReferencer::GeoReferencer()
-    : imageWidth(0), imageHeight(0), isCalibrated(false) {}
+    : originLat(0.0), originLon(0.0), resolutionMetersPerPixel(0.0), imageWidth(0), imageHeight(0), hasOrigin(false), hasResolution(false), hasDimensions(false) {}
 
-void GeoReferencer::setCalibration(const CalibrationPoint& topLeft,
-                                   const CalibrationPoint& topRight,
-                                   const CalibrationPoint& bottomLeft,
-                                   const CalibrationPoint& bottomRight) {
-    calibrationPoints[0] = topLeft;
-    calibrationPoints[1] = topRight;
-    calibrationPoints[2] = bottomLeft;
-    calibrationPoints[3] = bottomRight;
-    isCalibrated = true;
+void GeoReferencer::setOrigin(double lat, double lon) {
+    originLat = lat;
+    originLon = lon;
+    hasOrigin = true;
+}
+
+void GeoReferencer::setResolution(double metersPerPixel) {
+    if (metersPerPixel <= 0.0) {
+        throw std::runtime_error("Resolution must be positive");
+    }
+    resolutionMetersPerPixel = metersPerPixel;
+    hasResolution = true;
 }
 
 void GeoReferencer::setImageDimensions(int width, int height) {
+    if (width <= 0 || height <= 0) {
+        throw std::runtime_error("Invalid image dimensions");
+    }
     imageWidth = width;
     imageHeight = height;
+    hasDimensions = true;
 }
 
-Location GeoReferencer::pixelToLatLon(double pixelX, double pixelY) {
-    if (!isCalibrated) {
-        throw std::runtime_error("GeoReferencer not calibrated");
-    }
-    if (imageWidth <= 0 || imageHeight <= 0) {
-        throw std::runtime_error("Image dimensions not set");
+Location GeoReferencer::pixelToLatLon(double pixelX, double pixelY) const {
+    if (!hasOrigin || !hasResolution || !hasDimensions) {
+        throw std::runtime_error("GeoReferencer not configured");
     }
 
-    double u = pixelX / static_cast<double>(imageWidth - 1);
-    double v = pixelY / static_cast<double>(imageHeight - 1);
+    // Calculate approximate latitude/longitude for pixel coordinates assuming north-up orientation.
+    double metersPerDegreeLat = 111320.0;
+    double metersPerDegreeLon = metersPerDegreeLat * std::cos(originLat * M_PI / 180.0);
 
-    const CalibrationPoint& tl = calibrationPoints[0];
-    const CalibrationPoint& tr = calibrationPoints[1];
-    const CalibrationPoint& bl = calibrationPoints[2];
-    const CalibrationPoint& br = calibrationPoints[3];
-
-    double latTop = tl.lat * (1 - u) + tr.lat * u;
-    double latBottom = bl.lat * (1 - u) + br.lat * u;
-    double lonTop = tl.lon * (1 - u) + tr.lon * u;
-    double lonBottom = bl.lon * (1 - u) + br.lon * u;
+    double northMeters = pixelY * resolutionMetersPerPixel;
+    double eastMeters = pixelX * resolutionMetersPerPixel;
 
     Location loc;
-    loc.latitude = latTop * (1 - v) + latBottom * v;
-    loc.longitude = lonTop * (1 - v) + lonBottom * v;
+    loc.latitude = originLat - northMeters / metersPerDegreeLat;
+    loc.longitude = originLon + eastMeters / metersPerDegreeLon;
     return loc;
 }
